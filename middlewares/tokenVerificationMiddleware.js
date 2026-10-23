@@ -1,21 +1,19 @@
 import jwt from "jsonwebtoken";
 
-export function verifyToken(req, res, next) {
-    //get token from req
-    let accessToken = req.cookies.accessToken;
-    //if token not avaialble
-    if (accessToken === undefined) {
-        res.status(401).json({ success: false, message: "You must login to continue" });
-    } else {
-        // token validity(decoding)
+export const verifyToken = (req, res, next) => {
+    try {
+        // Retrieve token exclusively from HTTP-only cookies
+        const token = req.cookies && req.cookies.token;
 
-        try {
-            let decodedToken = jwt.verify(accessToken, "abcdefghijklmnopqrstuvwxyz");
-            console.log("decoded token :", decodedToken);
-            req.user = decodedToken;
-            next();
-        } catch (err) {
-            res.status(401).json({ success: false, message: "Please relogin to continue" });
+        if (!token) {
+            return res.status(401).json({ success: false, message: "Access denied. No token provided." });
         }
+
+        // Verify token
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+        req.user = decoded; // Attaches { id, role } to req.user
+        next();
+    } catch (error) {
+        return res.status(403).json({ success: false, message: "Invalid or expired token." });
     }
-}
+};
